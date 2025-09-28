@@ -21,7 +21,7 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
           key={item.href}
           href={item.href}
           className={cn(
-            'flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-4 border-b-2',
+            'flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-4 border-t-2',
             pathname === item.href
               ? 'text-primary border-primary'
               : 'text-muted-foreground border-transparent'
