@@ -1,8 +1,6 @@
 import { AppShell } from '@/components/shared/app-shell';
 import { PomodoroTimer } from '@/components/focus/pomodoro-timer';
 import { FocusMusic } from '@/components/focus/focus-music';
-import { CommunityChallenges } from '@/components/focus/community-challenges';
-import { StudyGroups } from '@/components/focus/study-groups';
 import { BlockDistractions } from '@/components/focus/block-distractions';
 
 export default function FocusPage() {
@@ -15,8 +13,6 @@ export default function FocusPage() {
         <div className="space-y-6">
           <FocusMusic />
           <BlockDistractions />
-          <CommunityChallenges />
-          <StudyGroups />
         </div>
       </div>
     </AppShell>
