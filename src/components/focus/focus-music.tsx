@@ -17,27 +17,36 @@ export function FocusMusic() {
     if (!audio) return;
 
     if (isPlaying) {
-      audio.play().catch(error => {
-        console.error("Audio play failed:", error);
-        setIsPlaying(false);
-      });
+        audio.play().catch(error => {
+            console.error("Audio play failed:", error);
+            setIsPlaying(false); // Reset state on playback failure
+        });
     } else {
-      audio.pause();
+        audio.pause();
     }
   }, [isPlaying]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && activeTrack) {
+        if (audio.src !== activeTrack.url) {
+            audio.src = activeTrack.url;
+            audio.load();
+        }
+        if (isPlaying) {
+            audio.play().catch(e => console.error("Error playing new track:", e));
+        }
+    }
+  }, [activeTrack, isPlaying]);
+
   const handlePlayPause = (track: MusicTrack) => {
     if (activeTrack?.url === track.url) {
-      // Toggle play/pause for the current track
+      // If it's the same track, just toggle play/pause
       setIsPlaying(!isPlaying);
     } else {
-      // Switch to a new track
+      // If it's a new track, set it and start playing
       setActiveTrack(track);
       setIsPlaying(true);
-      if (audioRef.current) {
-        audioRef.current.src = track.url;
-        audioRef.current.load(); // Important: load the new source
-      }
     }
   };
   
@@ -60,6 +69,11 @@ export function FocusMusic() {
         <audio 
           ref={audioRef} 
           onEnded={onEnded}
+          onCanPlay={() => {
+            if (isPlaying && audioRef.current) {
+                audioRef.current.play().catch(e => console.error("Error on canplay auto-play:", e));
+            }
+          }}
           className="hidden"
          />
         <ul className="space-y-3">
