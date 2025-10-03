@@ -16,11 +16,38 @@ export const achievements = [
   { icon: Zap, title: "Quick Learner", description: "Generated 10 AI summaries.", current: 4, total: 10 },
 ];
 
-export const musicTracks = [
-  { title: "Lofi Beats", description: "Chill, instrumental hip-hop to help you focus.", icon: "🎧" },
-  { title: "Rainy Day", description: "Soothing sounds of rain for a calm study environment.", icon: "🌧️" },
-  { title: "Binaural Waves", description: "Alpha waves (8-13Hz) to promote a state of relaxed alertness.", icon: "🌊" },
-  { title: "Classical Focus", description: "Orchestral masterpieces to inspire deep work.", icon: "🎻" },
+export type MusicTrack = {
+  title: string;
+  description: string;
+  icon: string;
+  url: string;
+};
+
+export const musicTracks: MusicTrack[] = [
+  { 
+    title: "Lofi Beats", 
+    description: "Chill, instrumental hip-hop.", 
+    icon: "🎧",
+    url: "https://www.chosic.com/wp-content/uploads/2021/04/purrple-cat-field-of-fireflies.mp3"
+  },
+  { 
+    title: "Rainy Day", 
+    description: "Soothing sounds of rain.", 
+    icon: "🌧️",
+    url: "https://www.chosic.com/wp-content/uploads/2022/01/Light-Rain-And-Thunder.mp3"
+  },
+  { 
+    title: "Binaural Waves", 
+    description: "Alpha waves for relaxed alertness.", 
+    icon: "🌊",
+    url: "https://www.chosic.com/wp-content/uploads/2022/03/binaural-beats-meditation-8-hz-alpha-waves.mp3"
+  },
+  { 
+    title: "Classical Focus", 
+    description: "Orchestral masterpieces.", 
+    icon: "🎻",
+    url: "https://www.chosic.com/wp-content/uploads/2022/03/Pachelbel-Canon-in-D-Best-version.mp3"
+  },
 ];
 
 export const communityChallenges = [
