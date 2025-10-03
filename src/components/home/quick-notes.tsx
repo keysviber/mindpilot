@@ -1,38 +1,68 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { FilePenLine, Save, Loader2 } from "lucide-react";
-import { useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useUser } from "@/firebase";
+
+// Define a type for our note for better type-safety
+type Note = {
+  id: number;
+  content: string;
+  createdAt: string;
+};
 
 export function QuickNotes() {
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user } = useUser(); // We still use this to associate notes with a user locally
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const notesCollection = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return collection(firestore, `users/${user.uid}/notes`);
-  }, [user, firestore]);
+  const getLocalStorageKey = () => {
+    // Create a unique key for each user, or a generic one for guests
+    return user ? `quick-notes_${user.uid}` : 'quick-notes_guest';
+  };
 
-  const { data: notes, isLoading } = useCollection(notesCollection);
+  useEffect(() => {
+    setIsLoading(true);
+    try {
+      const key = getLocalStorageKey();
+      const savedNotes = localStorage.getItem(key);
+      if (savedNotes) {
+        setNotes(JSON.parse(savedNotes));
+      } else {
+        setNotes([]);
+      }
+    } catch (error) {
+      console.error("Failed to load notes from localStorage", error);
+      setNotes([]);
+    }
+    setIsLoading(false);
+  }, [user]); // Rerun when the user logs in or out
 
-  const handleSaveNote = async () => {
-    if (!newNote.trim() || !notesCollection) return;
+  const handleSaveNote = () => {
+    if (!newNote.trim()) return;
 
     setIsSaving(true);
-    const noteData = {
+    const noteToSave: Note = {
+      id: Date.now(),
       content: newNote,
-      createdAt: serverTimestamp(),
+      createdAt: new Date().toISOString(),
     };
 
-    // We don't await this, UI can update optimistically
-    addDocumentNonBlocking(notesCollection, noteData);
+    const updatedNotes = [noteToSave, ...notes];
+    setNotes(updatedNotes);
+
+    try {
+      const key = getLocalStorageKey();
+      localStorage.setItem(key, JSON.stringify(updatedNotes));
+    } catch (error) {
+      console.error("Failed to save note to localStorage", error);
+      // Optionally, show a toast to the user
+    }
     
     setNewNote("");
     setIsSaving(false);
@@ -45,7 +75,7 @@ export function QuickNotes() {
           <FilePenLine className="h-5 w-5 text-primary" />
           <span>Quick Notes</span>
         </CardTitle>
-        <CardDescription>Jot down your thoughts. They are saved automatically.</CardDescription>
+        <CardDescription>Jot down your thoughts. They are saved locally to your device.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -64,11 +94,11 @@ export function QuickNotes() {
           <div className="space-y-3 pt-4">
             <h3 className="text-sm font-medium text-muted-foreground">My Notes</h3>
             {isLoading && <p>Loading notes...</p>}
-            {!isLoading && notes && notes.length === 0 && (
+            {!isLoading && notes.length === 0 && (
               <p className="text-sm text-muted-foreground">You haven't saved any notes yet.</p>
             )}
             <div className="space-y-2">
-              {notes?.map((note, index) => (
+              {notes.map((note, index) => (
                 <div 
                   key={note.id} 
                   className="p-3 bg-secondary rounded-md text-sm animate-fade-in-up"
