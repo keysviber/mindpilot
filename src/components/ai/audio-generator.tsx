@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Music, Volume2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useUser } from '@/firebase';
+
+type SavedAudio = {
+  id: number;
+  notes: string;
+  media: string; // data URI
+};
 
 const formSchema = z.object({
   notes: z.string().min(20, 'Please provide more content to generate quality audio.'),
@@ -21,6 +28,27 @@ export function AudioGenerator() {
   const [result, setResult] = useState<GenerateAudioFromNotesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
+  const [savedAudios, setSavedAudios] = useState<SavedAudio[]>([]);
+  const [areAudiosLoading, setAreAudiosLoading] = useState(true);
+
+  const getLocalStorageKey = () => {
+    return user ? `audio-notes_${user.uid}` : 'audio-notes_guest';
+  };
+
+  useEffect(() => {
+    setAreAudiosLoading(true);
+    try {
+      const key = getLocalStorageKey();
+      const storedAudios = localStorage.getItem(key);
+      if (storedAudios) {
+        setSavedAudios(JSON.parse(storedAudios));
+      }
+    } catch (error) {
+      console.error("Failed to load audio notes from localStorage", error);
+    }
+    setAreAudiosLoading(false);
+  }, [user]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,6 +65,22 @@ export function AudioGenerator() {
       const audioResult = await generateAudioFromNotes(values);
       if (audioResult.media) {
         setResult(audioResult);
+
+        const newAudio: SavedAudio = {
+          id: Date.now(),
+          notes: values.notes,
+          media: audioResult.media,
+        };
+
+        const updatedAudios = [newAudio, ...savedAudios];
+        setSavedAudios(updatedAudios);
+        localStorage.setItem(getLocalStorageKey(), JSON.stringify(updatedAudios));
+
+        toast({
+          title: 'Audio Note Saved Locally!',
+          description: 'Your new audio note has been saved to this device.',
+        });
+
       } else {
         toast({
           title: 'No Audio Generated',
@@ -58,44 +102,65 @@ export function AudioGenerator() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Audio Note Generator</CardTitle>
-          <CardDescription>
-            Paste your notes below, and the AI will convert them into an audio file you can listen to.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Notes</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Paste your notes here..." {...field} rows={15} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Music className="mr-2" />}
-                Generate Audio
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Audio Note Generator</CardTitle>
+            <CardDescription>
+              Paste your notes below, and the AI will convert them into an audio file you can listen to.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Your Notes</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Paste your notes here..." {...field} rows={15} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isLoading} className="w-full">
+                  {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Music className="mr-2" />}
+                  Generate & Save Audio
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+         <Card>
+            <CardHeader>
+                <CardTitle>Saved Audio Notes</CardTitle>
+                <CardDescription>Your locally saved audio notes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {areAudiosLoading && <p>Loading audio...</p>}
+                {!areAudiosLoading && savedAudios.length === 0 && <p className="text-sm text-muted-foreground text-center">No audio notes saved yet.</p>}
+                <div className="space-y-3">
+                    {savedAudios.map(audio => (
+                        <div key={audio.id} className="p-3 bg-secondary rounded-md text-sm">
+                            <p className="truncate font-medium mb-2">{audio.notes}</p>
+                            <audio controls className="w-full h-10">
+                                <source src={audio.media} type="audio/wav" />
+                            </audio>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      </div>
       <div className="lg:sticky top-8">
         <Card>
           <CardHeader>
             <CardTitle>Generated Audio</CardTitle>
             <CardDescription>
-              Listen to your generated audio notes below.
+              Listen to your generated audio notes below. They are saved locally.
             </CardDescription>
           </CardHeader>
           <CardContent>

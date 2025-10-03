@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,11 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Save } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser } from '@/firebase';
+
+type SavedNote = {
+  id: number;
+  title: string;
+  content: string;
+};
 
 const formSchema = z.object({
   documents: z.string().min(50, 'Please provide more content for a better summary.'),
@@ -24,60 +28,55 @@ const formSchema = z.object({
 
 export function NoteGenerator() {
   const { user } = useUser();
-  const firestore = useFirestore();
   const [result, setResult] = useState<SummarizeDocumentsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [areNotesLoading, setAreNotesLoading] = useState(true);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      documents: '',
-      lectureNotes: '',
-      title: '',
-    },
-  });
+  const getLocalStorageKey = () => {
+    return user ? `ai-notes_${user.uid}` : 'ai-notes_guest';
+  };
 
-  const aiNotesCollection = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return collection(firestore, `users/${user.uid}/ai_notes`);
-  }, [user, firestore]);
-
-  const { data: savedNotes, isLoading: areNotesLoading } = useCollection(aiNotesCollection);
+  useEffect(() => {
+    setAreNotesLoading(true);
+    try {
+      const key = getLocalStorageKey();
+      const storedNotes = localStorage.getItem(key);
+      if (storedNotes) {
+        setSavedNotes(JSON.parse(storedNotes));
+      }
+    } catch (error) {
+      console.error("Failed to load notes from localStorage", error);
+    }
+    setAreNotesLoading(false);
+  }, [user]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!aiNotesCollection) {
-        toast({
-            title: 'Error',
-            description: 'You must be logged in to save notes.',
-            variant: 'destructive',
-        });
-        return;
-    }
-    
     setIsLoading(true);
     setResult(null);
 
     try {
       const summaryResult = await summarizeDocuments({
         documents: values.documents,
-        lectureNotes: values.lectureNotes,
+        lectureNotes: values.lectureNotes || '',
       });
 
       setResult(summaryResult);
 
-      // Save the result to Firestore non-blockingly
-      const noteData = {
+      const newNote: SavedNote = {
+        id: Date.now(),
         title: values.title,
         content: summaryResult.summary,
-        sourceDocument: 'AI Summarizer',
-        creationDate: serverTimestamp(),
       };
-      addDocumentNonBlocking(aiNotesCollection, noteData);
+
+      const updatedNotes = [newNote, ...savedNotes];
+      setSavedNotes(updatedNotes);
+      localStorage.setItem(getLocalStorageKey(), JSON.stringify(updatedNotes));
       
       toast({
-        title: 'Note Saved!',
-        description: 'Your new AI-generated note has been saved.',
+        title: 'Note Saved Locally!',
+        description: 'Your new AI-generated note has been saved to this device.',
       });
 
     } catch (error) {
@@ -157,7 +156,7 @@ export function NoteGenerator() {
             <CardHeader>
                 <CardTitle>Generated Summary</CardTitle>
                 <CardDescription>
-                Your AI-powered summary will appear below.
+                Your AI-powered summary will appear below. It is saved locally.
                 </CardDescription>
             </CardHeader>
             <CardContent className="prose prose-sm dark:prose-invert max-w-none">
@@ -179,12 +178,12 @@ export function NoteGenerator() {
             <CardHeader>
                 <CardTitle>Saved AI Notes</CardTitle>
                 <CardDescription>
-                All of your generated summaries are saved here.
+                Your generated summaries saved on this device.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 {areNotesLoading && <p>Loading saved notes...</p>}
-                {!areNotesLoading && savedNotes && savedNotes.length === 0 && (
+                {!areNotesLoading && savedNotes.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center">No AI notes saved yet.</p>
                 )}
                 <div className="space-y-3">

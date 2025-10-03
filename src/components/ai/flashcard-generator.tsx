@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,10 +14,20 @@ import { Loader2, Layers } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Flashcard } from './flashcard';
 import { Skeleton } from '../ui/skeleton';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser } from '@/firebase';
 import { Input } from '../ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+
+type Flashcard = {
+  question: string;
+  answer: string;
+};
+
+type SavedFlashcardSet = {
+  id: number;
+  topic: string;
+  flashcards: Flashcard[];
+};
 
 const formSchema = z.object({
   studyMaterials: z.string().min(100, 'Please provide more content to generate quality flashcards.'),
@@ -29,12 +39,26 @@ export function FlashcardGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
-  const firestore = useFirestore();
+  const [savedSets, setSavedSets] = useState<SavedFlashcardSet[]>([]);
+  const [areSetsLoading, setAreSetsLoading] = useState(true);
 
-  const flashcardsCollection = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return collection(firestore, `users/${user.uid}/flashcards`);
-  }, [user, firestore]);
+  const getLocalStorageKey = () => {
+    return user ? `flashcard-sets_${user.uid}` : 'flashcard-sets_guest';
+  };
+
+  useEffect(() => {
+    setAreSetsLoading(true);
+    try {
+      const key = getLocalStorageKey();
+      const storedSets = localStorage.getItem(key);
+      if (storedSets) {
+        setSavedSets(JSON.parse(storedSets));
+      }
+    } catch (error) {
+      console.error("Failed to load flashcard sets from localStorage", error);
+    }
+    setAreSetsLoading(false);
+  }, [user]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,15 +69,6 @@ export function FlashcardGenerator() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!flashcardsCollection) {
-        toast({
-            title: 'Error',
-            description: 'You must be logged in to save flashcards.',
-            variant: 'destructive',
-        });
-        return;
-    }
-
     setIsLoading(true);
     setResult(null);
 
@@ -62,23 +77,19 @@ export function FlashcardGenerator() {
       if (flashcardResult.flashcards && flashcardResult.flashcards.length > 0) {
         setResult(flashcardResult);
         
-        // Save each flashcard to Firestore
-        const savePromises = flashcardResult.flashcards.map(card => {
-            const cardData = {
-                front: card.question,
-                back: card.answer,
-                topic: values.topic,
-                creationDate: serverTimestamp(),
-            };
-            return addDocumentNonBlocking(flashcardsCollection, cardData);
-        });
-        
-        // No need to await, but you can if you want to confirm all saves
-        await Promise.all(savePromises);
+        const newSet: SavedFlashcardSet = {
+          id: Date.now(),
+          topic: values.topic,
+          flashcards: flashcardResult.flashcards,
+        };
+
+        const updatedSets = [newSet, ...savedSets];
+        setSavedSets(updatedSets);
+        localStorage.setItem(getLocalStorageKey(), JSON.stringify(updatedSets));
 
         toast({
-          title: 'Flashcards Saved!',
-          description: `${flashcardResult.flashcards.length} new flashcards have been saved to your collection.`,
+          title: 'Flashcards Saved Locally!',
+          description: `A new set with ${flashcardResult.flashcards.length} flashcards on "${values.topic}" has been saved to this device.`,
         });
       } else {
         toast({
@@ -105,7 +116,7 @@ export function FlashcardGenerator() {
         <CardHeader>
           <CardTitle>AI Flashcard Generator</CardTitle>
           <CardDescription>
-            Paste your study materials, give it a topic, and the AI will create and save flashcards for you.
+            Paste your study materials, give it a topic, and the AI will create and save flashcards locally.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,12 +157,12 @@ export function FlashcardGenerator() {
         </CardContent>
       </Card>
 
-      <div className="lg:sticky top-8">
-        <Card>
+      <div className="space-y-6">
+        <Card className="lg:sticky top-8">
           <CardHeader>
             <CardTitle>Generated Flashcards</CardTitle>
             <CardDescription>
-              Review your new set of flashcards below. They are automatically saved.
+              Review your new set of flashcards below. They are automatically saved locally.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -183,6 +194,34 @@ export function FlashcardGenerator() {
               </div>
             )}
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Saved Flashcard Sets</CardTitle>
+                <CardDescription>Your locally saved flashcard sets.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {areSetsLoading && <p>Loading sets...</p>}
+                {!areSetsLoading && savedSets.length === 0 && <p className="text-sm text-muted-foreground text-center">No flashcard sets saved yet.</p>}
+                <Accordion type="single" collapsible className="w-full">
+                    {savedSets.map(set => (
+                        <AccordionItem value={`set-${set.id}`} key={set.id}>
+                            <AccordionTrigger>{set.topic} ({set.flashcards.length} cards)</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-2">
+                                    {set.flashcards.map((card, index) => (
+                                        <div key={index} className="p-2 bg-muted/50 rounded-md text-sm">
+                                            <p><strong>Q:</strong> {card.question}</p>
+                                            <p><strong>A:</strong> {card.answer}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            </CardContent>
         </Card>
       </div>
     </div>
