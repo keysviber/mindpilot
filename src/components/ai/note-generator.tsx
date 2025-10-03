@@ -10,15 +10,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, Save } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const formSchema = z.object({
   documents: z.string().min(50, 'Please provide more content for a better summary.'),
   lectureNotes: z.string().optional(),
+  title: z.string().min(3, 'Please provide a title for your notes.'),
 });
 
 export function NoteGenerator() {
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [result, setResult] = useState<SummarizeDocumentsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -28,16 +34,52 @@ export function NoteGenerator() {
     defaultValues: {
       documents: '',
       lectureNotes: '',
+      title: '',
     },
   });
 
+  const aiNotesCollection = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return collection(firestore, `users/${user.uid}/ai_notes`);
+  }, [user, firestore]);
+
+  const { data: savedNotes, isLoading: areNotesLoading } = useCollection(aiNotesCollection);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!aiNotesCollection) {
+        toast({
+            title: 'Error',
+            description: 'You must be logged in to save notes.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    
     setIsLoading(true);
     setResult(null);
 
     try {
-      const summaryResult = await summarizeDocuments(values);
+      const summaryResult = await summarizeDocuments({
+        documents: values.documents,
+        lectureNotes: values.lectureNotes,
+      });
+
       setResult(summaryResult);
+
+      // Save the result to Firestore non-blockingly
+      const noteData = {
+        title: values.title,
+        content: summaryResult.summary,
+        sourceDocument: 'AI Summarizer',
+        creationDate: serverTimestamp(),
+      };
+      addDocumentNonBlocking(aiNotesCollection, noteData);
+      
+      toast({
+        title: 'Note Saved!',
+        description: 'Your new AI-generated note has been saved.',
+      });
+
     } catch (error) {
       console.error('Error generating summary:', error);
       toast({
@@ -62,6 +104,19 @@ export function NoteGenerator() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note Title</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="e.g., Summary of Photosynthesis" {...field} rows={1} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="documents"
@@ -90,37 +145,59 @@ export function NoteGenerator() {
               />
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
-                Generate Summary
+                Generate & Save Summary
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
 
-      <Card className="lg:sticky top-8">
-        <CardHeader>
-          <CardTitle>Generated Summary</CardTitle>
-          <CardDescription>
-            Your AI-powered summary will appear below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-          {isLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          )}
-          {result ? (
-            <p>{result.summary}</p>
-          ) : (
-            !isLoading && <p className="text-muted-foreground">The result will be shown here.</p>
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card className="lg:sticky top-8">
+            <CardHeader>
+                <CardTitle>Generated Summary</CardTitle>
+                <CardDescription>
+                Your AI-powered summary will appear below.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                {isLoading && (
+                <div className="space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+                )}
+                {result ? (
+                <p>{result.summary}</p>
+                ) : (
+                !isLoading && <p className="text-muted-foreground">The result will be shown here.</p>
+                )}
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Saved AI Notes</CardTitle>
+                <CardDescription>
+                All of your generated summaries are saved here.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {areNotesLoading && <p>Loading saved notes...</p>}
+                {!areNotesLoading && savedNotes && savedNotes.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center">No AI notes saved yet.</p>
+                )}
+                <div className="space-y-3">
+                    {savedNotes?.map((note) => (
+                        <div key={note.id} className="p-3 bg-secondary rounded-md text-sm">
+                            <p className="font-bold">{note.title}</p>
+                            <p className="truncate">{note.content}</p>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

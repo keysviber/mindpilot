@@ -10,35 +10,76 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Layers } from 'lucide-react';
+import { Loader2, Layers } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Flashcard } from './flashcard';
 import { Skeleton } from '../ui/skeleton';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Input } from '../ui/input';
 
 const formSchema = z.object({
   studyMaterials: z.string().min(100, 'Please provide more content to generate quality flashcards.'),
+  topic: z.string().min(3, 'Please provide a topic for this flashcard set.'),
 });
 
 export function FlashcardGenerator() {
   const [result, setResult] = useState<GenerateFlashcardsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const flashcardsCollection = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return collection(firestore, `users/${user.uid}/flashcards`);
+  }, [user, firestore]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       studyMaterials: '',
+      topic: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!flashcardsCollection) {
+        toast({
+            title: 'Error',
+            description: 'You must be logged in to save flashcards.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
     setIsLoading(true);
     setResult(null);
 
     try {
-      const flashcardResult = await generateFlashcards(values);
+      const flashcardResult = await generateFlashcards({ studyMaterials: values.studyMaterials });
       if (flashcardResult.flashcards && flashcardResult.flashcards.length > 0) {
         setResult(flashcardResult);
+        
+        // Save each flashcard to Firestore
+        const savePromises = flashcardResult.flashcards.map(card => {
+            const cardData = {
+                front: card.question,
+                back: card.answer,
+                topic: values.topic,
+                creationDate: serverTimestamp(),
+            };
+            return addDocumentNonBlocking(flashcardsCollection, cardData);
+        });
+        
+        // No need to await, but you can if you want to confirm all saves
+        await Promise.all(savePromises);
+
+        toast({
+          title: 'Flashcards Saved!',
+          description: `${flashcardResult.flashcards.length} new flashcards have been saved to your collection.`,
+        });
       } else {
         toast({
           title: 'No Flashcards Generated',
@@ -64,12 +105,25 @@ export function FlashcardGenerator() {
         <CardHeader>
           <CardTitle>AI Flashcard Generator</CardTitle>
           <CardDescription>
-            Paste your study materials below, and the AI will create flashcards for you.
+            Paste your study materials, give it a topic, and the AI will create and save flashcards for you.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                  control={form.control}
+                  name="topic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Flashcard Topic</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Cell Biology" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="studyMaterials"
@@ -85,7 +139,7 @@ export function FlashcardGenerator() {
               />
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Layers className="mr-2" />}
-                Generate Flashcards
+                Generate & Save Flashcards
               </Button>
             </form>
           </Form>
@@ -97,7 +151,7 @@ export function FlashcardGenerator() {
           <CardHeader>
             <CardTitle>Generated Flashcards</CardTitle>
             <CardDescription>
-              Review your new set of flashcards below. Click to flip.
+              Review your new set of flashcards below. They are automatically saved.
             </CardDescription>
           </CardHeader>
           <CardContent>
