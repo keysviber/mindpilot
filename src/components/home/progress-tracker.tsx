@@ -5,7 +5,7 @@ import { TrendingUp } from "lucide-react";
 
 export function ProgressTracker() {
   return (
-    <Card>
+    <Card className="animate-fade-in-up">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
@@ -13,10 +13,14 @@ export function ProgressTracker() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {achievements.map((achievement) => {
+        {achievements.map((achievement, index) => {
           const percentage = (achievement.current / achievement.total) * 100;
           return (
-            <div key={achievement.title}>
+            <div 
+              key={achievement.title} 
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <achievement.icon className="h-5 w-5 text-muted-foreground" />

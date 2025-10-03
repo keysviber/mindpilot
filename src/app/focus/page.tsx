@@ -9,12 +9,16 @@ export default function FocusPage() {
     <AuthGuard>
       <AppShell>
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 animate-fade-in-up">
             <PomodoroTimer />
           </div>
           <div className="space-y-6">
-            <AiFocusMusic />
-            <BlockDistractions />
+            <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <AiFocusMusic />
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <BlockDistractions />
+            </div>
           </div>
         </div>
       </AppShell>

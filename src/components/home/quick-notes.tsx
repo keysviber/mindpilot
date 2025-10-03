@@ -39,7 +39,7 @@ export function QuickNotes() {
   };
 
   return (
-    <Card>
+    <Card className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FilePenLine className="h-5 w-5 text-primary" />
@@ -68,8 +68,12 @@ export function QuickNotes() {
               <p className="text-sm text-muted-foreground">You haven't saved any notes yet.</p>
             )}
             <div className="space-y-2">
-              {notes?.map((note) => (
-                <div key={note.id} className="p-3 bg-secondary rounded-md text-sm">
+              {notes?.map((note, index) => (
+                <div 
+                  key={note.id} 
+                  className="p-3 bg-secondary rounded-md text-sm animate-fade-in-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
                   {note.content}
                 </div>
               ))}

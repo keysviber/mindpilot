@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function WeeklyReport() {
   return (
-    <Card>
+    <Card className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart className="h-5 w-5 text-primary" />

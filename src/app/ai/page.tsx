@@ -11,7 +11,7 @@ export default function AiPage() {
   return (
     <AuthGuard>
       <AppShell>
-        <Tabs defaultValue="summarizer" className="w-full">
+        <Tabs defaultValue="summarizer" className="w-full animate-fade-in-up">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="summarizer">
               <Book className="mr-2 h-4 w-4" />

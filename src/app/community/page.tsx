@@ -8,8 +8,12 @@ export default function CommunityPage() {
     <AuthGuard>
       <AppShell>
         <div className="grid gap-6 lg:grid-cols-2">
-            <CommunityChallenges />
-            <StudyGroups />
+            <div className="animate-fade-in-up">
+                <CommunityChallenges />
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                <StudyGroups />
+            </div>
         </div>
       </AppShell>
     </AuthGuard>
