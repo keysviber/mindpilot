@@ -3,13 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, Bot, Target, Users } from 'lucide-react';
+import { Home, Bot, Target } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/ai', label: 'AI Tools', icon: Bot },
   { href: '/focus', label: 'Focus', icon: Target },
-  { href: '/community', label: 'Community', icon: Users },
 ];
 
 export function MobileNav({ className, ...props }: React.HTMLAttributes<HTMLElement>) {

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { BrainCircuit, Bell } from 'lucide-react';
+import { BrainCircuit, Bell, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser, useAuth } from '@/firebase';
 import {
@@ -42,6 +42,12 @@ export function AppHeader() {
         <div className="flex items-center gap-4">
           {user ? (
              <>
+              <Button asChild variant="ghost">
+                <Link href="/community">
+                  <Users className="mr-2" />
+                  Community
+                </Link>
+              </Button>
               <Button variant="ghost" size="icon">
                 <Bell className="h-5 w-5" />
                 <span className="sr-only">Notifications</span>
@@ -73,6 +79,9 @@ export function AppHeader() {
             </>
           ) : (
             <>
+              <Button asChild variant="ghost">
+                <Link href="/community">Community</Link>
+              </Button>
               <Button asChild variant="ghost">
                 <Link href="/login">Sign In</Link>
               </Button>
