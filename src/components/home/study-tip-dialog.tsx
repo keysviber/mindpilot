@@ -21,46 +21,45 @@ export function StudyTipDialog() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Prevent dialog from opening on every navigation
-    const hasOpened = sessionStorage.getItem('studyTipDialogOpened');
-    if (!hasOpened) {
+    const today = new Date().toISOString().split('T')[0];
+    const lastOpened = localStorage.getItem('studyTipDialogLastOpened');
+
+    if (lastOpened !== today) {
       setIsOpen(true);
-      sessionStorage.setItem('studyTipDialogOpened', 'true');
-    }
+      localStorage.setItem('studyTipDialogLastOpened', today);
 
-    const fetchTip = async () => {
-      setIsLoading(true);
-      try {
-        // Extract performance data
-        const performanceData = {
-          streak: achievements.find(a => a.title.includes('Streak'))?.current || 0,
-          pomodoroSessions: achievements.find(a => a.title.includes('Pomodoro'))?.current || 0,
-          aiSummaries: achievements.find(a => a.title.includes('Learner'))?.current || 0,
-        };
+      const fetchTip = async () => {
+        setIsLoading(true);
+        try {
+          const performanceData = {
+            streak: achievements.find(a => a.title.includes('Streak'))?.current || 0,
+            pomodoroSessions: achievements.find(a => a.title.includes('Pomodoro'))?.current || 0,
+            aiSummaries: achievements.find(a => a.title.includes('Learner'))?.current || 0,
+          };
 
-        const result = await generatePersonalizedStudyTip(performanceData);
-        if (result.tip) {
-          setTip(result.tip);
-        } else {
-          setTip("Keep up the great work! Consistency is key to success.");
+          const result = await generatePersonalizedStudyTip(performanceData);
+          if (result.tip) {
+            setTip(result.tip);
+          } else {
+            setTip("Keep up the great work! Consistency is key to success.");
+          }
+        } catch (error) {
+          console.error("Failed to generate personalized tip:", error);
+          setTip("Welcome back! Try to complete one focus session today to build your streak.");
+          toast({
+            title: 'Could not fetch AI tip',
+            description: 'Showing a default tip instead.',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to generate personalized tip:", error);
-        setTip("Welcome back! Try to complete one focus session today to build your streak.");
-        toast({
-          title: 'Could not fetch AI tip',
-          description: 'Showing a default tip instead.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    fetchTip();
+      fetchTip();
+    }
   }, [toast]);
 
-  // Don't render the dialog if it's not supposed to be open
   if (!isOpen) {
     return null;
   }
@@ -71,7 +70,7 @@ export function StudyTipDialog() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lightbulb className="h-6 w-6 text-primary" />
-            Your Personalized Tip!
+            Your Daily Tip!
           </DialogTitle>
           <DialogDescription>
             Here is some advice based on your recent activity.
