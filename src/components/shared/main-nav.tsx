@@ -1,3 +1,4 @@
+
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -11,7 +12,7 @@ const navItems = [
   { href: '/community', label: 'Community', icon: Users },
 ];
 
-export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
+export function MobileNav({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
   const pathname = usePathname();
 
   return (
@@ -21,14 +22,14 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
           key={item.href}
           href={item.href}
           className={cn(
-            'flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary py-4 border-t-2',
+            'flex flex-col items-center gap-1 text-xs font-medium transition-colors hover:text-primary py-2 px-2 rounded-md w-20',
             pathname === item.href
-              ? 'text-primary border-primary'
-              : 'text-muted-foreground border-transparent'
+              ? 'text-primary bg-primary/10'
+              : 'text-muted-foreground'
           )}
         >
-          <item.icon className="h-4 w-4" />
-          {item.label}
+          <item.icon className="h-5 w-5" />
+          <span>{item.label}</span>
         </Link>
       ))}
     </nav>

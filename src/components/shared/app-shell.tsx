@@ -1,5 +1,5 @@
 import { AppHeader } from '@/components/shared/app-header';
-import { MainNav } from '@/components/shared/main-nav';
+import { MobileNav } from '@/components/shared/main-nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <footer className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex justify-center px-4">
-          <MainNav />
+          <MobileNav />
         </div>
       </footer>
     </div>
