@@ -72,7 +72,7 @@ const generateFocusSoundFlow = ai.defineFlow(
             },
           },
         },
-        prompt: `Soundscape: ${input.description}`,
+        prompt: `This is a request to generate an ambient soundscape, not to speak the text. Create a sound effect that matches the following description: ${input.description}`,
       });
 
       if (!media) {
