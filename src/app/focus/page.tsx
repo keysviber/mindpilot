@@ -1,6 +1,6 @@
 import { AppShell } from '@/components/shared/app-shell';
 import { PomodoroTimer } from '@/components/focus/pomodoro-timer';
-import { FocusMusic } from '@/components/focus/focus-music';
+import { AiFocusMusic } from '@/components/focus/ai-focus-music';
 import { BlockDistractions } from '@/components/focus/block-distractions';
 import { AuthGuard } from '@/components/shared/auth-guard';
 
@@ -13,7 +13,7 @@ export default function FocusPage() {
             <PomodoroTimer />
           </div>
           <div className="space-y-6">
-            <FocusMusic />
+            <AiFocusMusic />
             <BlockDistractions />
           </div>
         </div>

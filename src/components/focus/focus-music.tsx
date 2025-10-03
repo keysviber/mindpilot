@@ -1,11 +1,18 @@
+
 'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { musicTracks, type MusicTrack } from "@/lib/data";
-import { Music, Play, Pause, Volume2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { musicTracks, type MusicTrack } from '@/lib/data';
+import { Music, Play, Pause, Volume2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function FocusMusic() {
   const [activeTrack, setActiveTrack] = useState<MusicTrack | null>(null);
@@ -19,13 +26,13 @@ export function FocusMusic() {
     if (activeTrack) {
       if (audio.src !== activeTrack.url) {
         audio.src = activeTrack.url;
-        audio.load(); // Explicitly load the new source
+        audio.load();
       }
       
       if (isPlaying) {
         audio.play().catch(error => {
           console.error("Audio play failed:", error);
-          setIsPlaying(false); // If play fails, update state
+          setIsPlaying(false);
         });
       } else {
         audio.pause();
@@ -33,15 +40,19 @@ export function FocusMusic() {
     } else {
       audio.pause();
     }
+    
+    const handleEnd = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnd);
+    return () => {
+      audio.removeEventListener('ended', handleEnd);
+    }
   }, [activeTrack, isPlaying]);
 
 
   const handlePlayPause = (track: MusicTrack) => {
-    // If it's the same track, toggle play/pause
     if (activeTrack?.url === track.url) {
       setIsPlaying(!isPlaying);
     } else {
-      // It's a new track, set it and start playing.
       setActiveTrack(track);
       setIsPlaying(true);
     }
@@ -57,11 +68,7 @@ export function FocusMusic() {
         <CardDescription>Background soundscapes for concentration.</CardDescription>
       </CardHeader>
       <CardContent>
-        <audio 
-          ref={audioRef}
-          className="hidden"
-          onEnded={() => setIsPlaying(false)} // When track finishes, update state
-         />
+        <audio ref={audioRef} className="hidden" />
         <ul className="space-y-3">
           {musicTracks.map((track) => {
             const isActive = activeTrack?.url === track.url;
