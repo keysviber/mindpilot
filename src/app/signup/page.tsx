@@ -29,6 +29,10 @@ export default function SignupPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      toast({
+        title: 'You are all set!',
+        description: "Welcome to MindPilot.",
+      });
       router.push('/');
     } catch (error: any) {
       toast({
