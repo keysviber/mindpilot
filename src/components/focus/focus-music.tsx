@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { musicTracks, type MusicTrack } from "@/lib/data";
-import { Music, Play, Pause, Volume2, Waves } from "lucide-react";
+import { Music, Play, Pause, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function FocusMusic() {
@@ -12,33 +12,31 @@ export function FocusMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+            console.error("Audio play failed:", error);
+            setIsPlaying(false); // Reset state if play fails
+        });
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying, activeTrack]);
+
   const handlePlayPause = (track: MusicTrack) => {
     if (activeTrack?.url === track.url) {
-      if (isPlaying) {
-        audioRef.current?.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current?.play();
-        setIsPlaying(true);
-      }
+      setIsPlaying(!isPlaying);
     } else {
       setActiveTrack(track);
       setIsPlaying(true);
-      // The audio element will auto-play due to the `onLoadedData` effect.
     }
   };
   
   const onEnded = () => {
     setIsPlaying(false);
-    setActiveTrack(null);
-  }
-
-  const onPlaying = () => {
-    setIsPlaying(true);
-  }
-
-  const onPause = () => {
-    setIsPlaying(false);
+    // Optional: play next track
   }
 
   return (
@@ -56,9 +54,6 @@ export function FocusMusic() {
             ref={audioRef} 
             src={activeTrack.url}
             onEnded={onEnded}
-            onPlay={onPlaying}
-            onPause={onPause}
-            autoPlay
             className="hidden"
            />
         )}
