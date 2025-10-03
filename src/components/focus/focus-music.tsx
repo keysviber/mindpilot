@@ -12,55 +12,61 @@ export function FocusMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Effect for handling play/pause
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.play().catch(error => {
-        // Autoplay can be blocked by the browser, so we handle the error gracefully
-        console.error("Audio play failed:", error);
-        setIsPlaying(false);
-      });
-    } else {
-      audio.pause();
+    if (!audio || !activeTrack) {
+      return;
     }
-  }, [isPlaying]);
 
-  // Effect for changing the track
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio && activeTrack) {
-      if (audio.src !== activeTrack.url) {
-        audio.src = activeTrack.url;
-        audio.load(); // explicitly load the new source
-        if (isPlaying) {
-          audio.play().catch(e => console.error("Error playing new track:", e));
-        }
-      }
-    } else if (audio) {
-      audio.pause();
-      audio.src = "";
+    // When the track changes, update the source and play
+    audio.src = activeTrack.url;
+    audio.load();
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          // Automatic playback started!
+          setIsPlaying(true);
+        })
+        .catch(error => {
+          // Auto-play was prevented
+          console.error("Audio play failed:", error);
+          setIsPlaying(false);
+        });
+    }
+
+    const handleEnded = () => {
+        setIsPlaying(false);
+    }
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+        audio.pause();
+        audio.removeEventListener('ended', handleEnded);
     }
   }, [activeTrack]);
 
+
   const handlePlayPause = (track: MusicTrack) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    // If it's the same track, toggle play/pause
     if (activeTrack?.url === track.url) {
-      // If it's the same track, just toggle play/pause
-      setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        audio.pause();
+        setIsPlaying(false);
+      } else {
+        audio.play().catch(e => console.error("Failed to play", e));
+        setIsPlaying(true);
+      }
     } else {
-      // If it's a new track, set it and start playing
+      // It's a new track, set it. The useEffect will handle playback.
       setActiveTrack(track);
-      setIsPlaying(true);
     }
   };
   
-  const onEnded = () => {
-    setIsPlaying(false);
-    // Optional: play next track in the playlist
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -72,8 +78,7 @@ export function FocusMusic() {
       </CardHeader>
       <CardContent>
         <audio 
-          ref={audioRef} 
-          onEnded={onEnded}
+          ref={audioRef}
           className="hidden"
          />
         <ul className="space-y-3">
