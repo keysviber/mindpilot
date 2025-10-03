@@ -14,56 +14,36 @@ export function FocusMusic() {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !activeTrack) {
-      return;
-    }
+    if (!audio) return;
 
-    // When the track changes, update the source and play
-    audio.src = activeTrack.url;
-    audio.load();
-    const playPromise = audio.play();
-
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          // Automatic playback started!
-          setIsPlaying(true);
-        })
-        .catch(error => {
-          // Auto-play was prevented
+    if (activeTrack) {
+      if (audio.src !== activeTrack.url) {
+        audio.src = activeTrack.url;
+        audio.load(); // Explicitly load the new source
+      }
+      
+      if (isPlaying) {
+        audio.play().catch(error => {
           console.error("Audio play failed:", error);
-          setIsPlaying(false);
+          setIsPlaying(false); // If play fails, update state
         });
-    }
-
-    const handleEnded = () => {
-        setIsPlaying(false);
-    }
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
+      } else {
         audio.pause();
-        audio.removeEventListener('ended', handleEnded);
+      }
+    } else {
+      audio.pause();
     }
-  }, [activeTrack]);
+  }, [activeTrack, isPlaying]);
 
 
   const handlePlayPause = (track: MusicTrack) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
     // If it's the same track, toggle play/pause
     if (activeTrack?.url === track.url) {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        audio.play().catch(e => console.error("Failed to play", e));
-        setIsPlaying(true);
-      }
+      setIsPlaying(!isPlaying);
     } else {
-      // It's a new track, set it. The useEffect will handle playback.
+      // It's a new track, set it and start playing.
       setActiveTrack(track);
+      setIsPlaying(true);
     }
   };
   
@@ -80,6 +60,7 @@ export function FocusMusic() {
         <audio 
           ref={audioRef}
           className="hidden"
+          onEnded={() => setIsPlaying(false)} // When track finishes, update state
          />
         <ul className="space-y-3">
           {musicTracks.map((track) => {
