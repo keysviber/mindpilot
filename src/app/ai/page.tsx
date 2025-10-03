@@ -2,6 +2,8 @@ import { AppShell } from '@/components/shared/app-shell';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NoteGenerator } from '@/components/ai/note-generator';
 import { FlashcardGenerator } from '@/components/ai/flashcard-generator';
+import { AudioGenerator } from '@/components/ai/audio-generator';
+import { StudyPlanGenerator } from '@/components/ai/study-plan-generator';
 import { Book, Layers, Music, Route } from 'lucide-react';
 import { AuthGuard } from '@/components/shared/auth-guard';
 
@@ -10,7 +12,7 @@ export default function AiPage() {
     <AuthGuard>
       <AppShell>
         <Tabs defaultValue="summarizer" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="summarizer">
               <Book className="mr-2 h-4 w-4" />
               Summarizer
@@ -19,13 +21,13 @@ export default function AiPage() {
               <Layers className="mr-2 h-4 w-4" />
               Flashcards
             </TabsTrigger>
-            <TabsTrigger value="study-plan" disabled>
-              <Route className="mr-2 h-4 w-4" />
-              Study Plan
-            </TabsTrigger>
-            <TabsTrigger value="audio-notes" disabled>
+            <TabsTrigger value="audio-notes">
               <Music className="mr-2 h-4 w-4" />
               Audio Notes
+            </TabsTrigger>
+            <TabsTrigger value="study-plan">
+              <Route className="mr-2 h-4 w-4" />
+              Study Plan
             </TabsTrigger>
           </TabsList>
           <TabsContent value="summarizer" className="mt-6">
@@ -34,23 +36,11 @@ export default function AiPage() {
           <TabsContent value="flashcards" className="mt-6">
             <FlashcardGenerator />
           </TabsContent>
-          <TabsContent value="study-plan" className="mt-6">
-            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-              <Route className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">AI Study Plans Coming Soon</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Personalized study schedules based on your syllabus and exam dates.
-              </p>
-            </div>
-          </TabsContent>
           <TabsContent value="audio-notes" className="mt-6">
-            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-              <Music className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">Note-to-Audiobook Coming Soon</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Convert your study notes into audio for learning on the go.
-              </p>
-            </div>
+            <AudioGenerator />
+          </TabsContent>
+          <TabsContent value="study-plan" className="mt-6">
+            <StudyPlanGenerator />
           </TabsContent>
         </Tabs>
       </AppShell>
