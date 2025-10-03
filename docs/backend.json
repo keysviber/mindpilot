@@ -1,0 +1,460 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user of the MindPilot application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "username": {
+          "type": "string",
+          "description": "User's chosen username."
+        },
+        "joinDate": {
+          "type": "string",
+          "description": "Date and time when the user joined MindPilot.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "username",
+        "joinDate"
+      ]
+    },
+    "AiNote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AiNote",
+      "type": "object",
+      "description": "Represents AI-generated notes summarizing documents or lectures.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AiNote entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N AiNote)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the AI-generated note."
+        },
+        "content": {
+          "type": "string",
+          "description": "The actual content of the AI-generated note."
+        },
+        "sourceDocument": {
+          "type": "string",
+          "description": "The identifier, or name, of the source document or lecture from which the notes were generated."
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "Date and time when the AI-generated note was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "content",
+        "creationDate",
+        "sourceDocument"
+      ]
+    },
+    "Flashcard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Flashcard",
+      "type": "object",
+      "description": "Represents a flashcard generated for active recall.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Flashcard entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Flashcard)"
+        },
+        "front": {
+          "type": "string",
+          "description": "The question or prompt on the front of the flashcard."
+        },
+        "back": {
+          "type": "string",
+          "description": "The answer or explanation on the back of the flashcard."
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "Date and time when the flashcard was created.",
+          "format": "date-time"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Topic associated with the flashcard."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "front",
+        "back",
+        "creationDate",
+        "topic"
+      ]
+    },
+    "PomodoroSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PomodoroSession",
+      "type": "object",
+      "description": "Represents a Pomodoro study session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PomodoroSession entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N PomodoroSession)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Date and time when the Pomodoro session started.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Date and time when the Pomodoro session ended.",
+          "format": "date-time"
+        },
+        "focusIntervals": {
+          "type": "number",
+          "description": "Number of focus intervals completed during the session."
+        },
+        "breakIntervals": {
+          "type": "number",
+          "description": "Number of break intervals taken during the session."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "startTime",
+        "endTime",
+        "focusIntervals",
+        "breakIntervals"
+      ]
+    },
+    "FocusMusic": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FocusMusic",
+      "type": "object",
+      "description": "Represents a focus music track or playlist.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FocusMusic entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the focus music track or playlist."
+        },
+        "artist": {
+          "type": "string",
+          "description": "Artist of the focus music track."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to the focus music track.",
+          "format": "uri"
+        },
+        "genre": {
+          "type": "string",
+          "description": "Genre of the focus music track."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "artist",
+        "url",
+        "genre"
+      ]
+    },
+    "ProgressTracking": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProgressTracking",
+      "type": "object",
+      "description": "Represents the user's study progress, streaks, and achievements.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProgressTracking entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ProgressTracking)"
+        },
+        "currentStreak": {
+          "type": "number",
+          "description": "Current consecutive days of studying."
+        },
+        "longestStreak": {
+          "type": "number",
+          "description": "Longest consecutive days of studying achieved by the user."
+        },
+        "totalStudyTime": {
+          "type": "number",
+          "description": "Total study time in minutes or hours."
+        },
+        "achievements": {
+          "type": "array",
+          "description": "List of achievements earned by the user.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "currentStreak",
+        "longestStreak",
+        "totalStudyTime",
+        "achievements"
+      ]
+    },
+    "Note": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Note",
+      "type": "object",
+      "description": "Represents a user's note taken within the app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Note entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Note)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the note."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the note."
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "Date and time when the note was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "content",
+        "creationDate"
+      ]
+    },
+    "StudyTip": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudyTip",
+      "type": "object",
+      "description": "Represents a daily study tip.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudyTip entity."
+        },
+        "tip": {
+          "type": "string",
+          "description": "The study tip."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date when the study tip is displayed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "tip",
+        "date"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information.  Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/ai_notes/{aiNoteId}",
+        "definition": {
+          "entityName": "AiNote",
+          "schema": {
+            "$ref": "#/backend/entities/AiNote"
+          },
+          "description": "Stores AI-generated notes for a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "aiNoteId",
+              "description": "The unique identifier of the AI note."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/flashcards/{flashcardId}",
+        "definition": {
+          "entityName": "Flashcard",
+          "schema": {
+            "$ref": "#/backend/entities/Flashcard"
+          },
+          "description": "Stores flashcards created by a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "flashcardId",
+              "description": "The unique identifier of the flashcard."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/pomodoro_sessions/{pomodoroSessionId}",
+        "definition": {
+          "entityName": "PomodoroSession",
+          "schema": {
+            "$ref": "#/backend/entities/PomodoroSession"
+          },
+          "description": "Stores Pomodoro session data for a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "pomodoroSessionId",
+              "description": "The unique identifier of the Pomodoro session."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/focus_music/{focusMusicId}",
+        "definition": {
+          "entityName": "FocusMusic",
+          "schema": {
+            "$ref": "#/backend/entities/FocusMusic"
+          },
+          "description": "Stores focus music tracks available to all users. Admin-manageable.",
+          "params": [
+            {
+              "name": "focusMusicId",
+              "description": "The unique identifier of the focus music track."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/progress_tracking/{progressTrackingId}",
+        "definition": {
+          "entityName": "ProgressTracking",
+          "schema": {
+            "$ref": "#/backend/entities/ProgressTracking"
+          },
+          "description": "Stores progress tracking data for a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "progressTrackingId",
+              "description": "The unique identifier of the progress tracking data."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notes/{noteId}",
+        "definition": {
+          "entityName": "Note",
+          "schema": {
+            "$ref": "#/backend/entities/Note"
+          },
+          "description": "Stores notes taken by a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "noteId",
+              "description": "The unique identifier of the note."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/study_tips/{studyTipId}",
+        "definition": {
+          "entityName": "StudyTip",
+          "schema": {
+            "$ref": "#/backend/entities/StudyTip"
+          },
+          "description": "Stores study tips available to all users. Admin-manageable.",
+          "params": [
+            {
+              "name": "studyTipId",
+              "description": "The unique identifier of the study tip."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to optimize for security, scalability, and ease of querying, adhering to the principle of Authorization Independence by denormalizing access control data where necessary. Path-Based Ownership is used for entities directly related to users, such as notes, flashcards, and Pomodoro sessions. A segregation approach is used by storing all user-related data under the `/users/{userId}` path, thus ensuring that each collection has a homogeneous security posture.\n\n*   **User Profiles:** Stored under `/users/{userId}` for private user data, directly owned and accessible only by the user.\n*   **User-Specific Data (AiNotes, Flashcards, PomodoroSessions, Notes, ProgressTracking):** These are stored as subcollections under `/users/{userId}` (e.g., `/users/{userId}/ai_notes/{aiNoteId}`). This structure enforces clear ownership and simplifies security rules.\n*   **Study Tips:** Study tips are stored in a top-level `study_tips` collection. These can be managed by admins (not detailed in provided auth), and queried by all users. The assumption is that these tips do not contain sensitive information. For simplicity, no user association is done here.\n*   **Focus Music:** Focus music tracks are stored in a top-level `focus_music` collection. This collection would be suitable for admin-curated music tracks that can be accessed by all users. No user association is done here.\n\nThis design avoids using `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the document path. This is crucial for maintaining atomic operations and avoiding the complexities associated with hierarchical authorization dependencies. All user-specific data utilizes Path-Based ownership for QAPs, enabling secure list operations scoped to the user's data. Public, global data like Study Tips and Focus Music reside in top-level collections."
+  }
+}
