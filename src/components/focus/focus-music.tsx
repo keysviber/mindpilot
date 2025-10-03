@@ -13,30 +13,37 @@ export function FocusMusic() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(error => {
-            console.error("Audio play failed:", error);
-            setIsPlaying(false); // Reset state if play fails
-        });
-      } else {
-        audioRef.current.pause();
-      }
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch(error => {
+        console.error("Audio play failed:", error);
+        setIsPlaying(false);
+      });
+    } else {
+      audio.pause();
     }
-  }, [isPlaying, activeTrack]);
+  }, [isPlaying]);
 
   const handlePlayPause = (track: MusicTrack) => {
     if (activeTrack?.url === track.url) {
+      // Toggle play/pause for the current track
       setIsPlaying(!isPlaying);
     } else {
+      // Switch to a new track
       setActiveTrack(track);
       setIsPlaying(true);
+      if (audioRef.current) {
+        audioRef.current.src = track.url;
+        audioRef.current.load(); // Important: load the new source
+      }
     }
   };
   
   const onEnded = () => {
     setIsPlaying(false);
-    // Optional: play next track
+    // Optional: play next track in the playlist
   }
 
   return (
@@ -49,14 +56,12 @@ export function FocusMusic() {
         <CardDescription>Background soundscapes for concentration.</CardDescription>
       </CardHeader>
       <CardContent>
-        {activeTrack && (
-          <audio 
-            ref={audioRef} 
-            src={activeTrack.url}
-            onEnded={onEnded}
-            className="hidden"
-           />
-        )}
+        {/* The audio element is now always rendered but hidden */}
+        <audio 
+          ref={audioRef} 
+          onEnded={onEnded}
+          className="hidden"
+         />
         <ul className="space-y-3">
           {musicTracks.map((track) => {
             const isActive = activeTrack?.url === track.url;
