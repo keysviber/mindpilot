@@ -12,32 +12,38 @@ export function FocusMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Effect for handling play/pause
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (isPlaying) {
-        audio.play().catch(error => {
-            console.error("Audio play failed:", error);
-            setIsPlaying(false); // Reset state on playback failure
-        });
+      audio.play().catch(error => {
+        // Autoplay can be blocked by the browser, so we handle the error gracefully
+        console.error("Audio play failed:", error);
+        setIsPlaying(false);
+      });
     } else {
-        audio.pause();
+      audio.pause();
     }
   }, [isPlaying]);
 
+  // Effect for changing the track
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && activeTrack) {
-        if (audio.src !== activeTrack.url) {
-            audio.src = activeTrack.url;
-            audio.load();
-        }
+      if (audio.src !== activeTrack.url) {
+        audio.src = activeTrack.url;
+        audio.load(); // explicitly load the new source
         if (isPlaying) {
-            audio.play().catch(e => console.error("Error playing new track:", e));
+          audio.play().catch(e => console.error("Error playing new track:", e));
         }
+      }
+    } else if (audio) {
+      audio.pause();
+      audio.src = "";
     }
-  }, [activeTrack, isPlaying]);
+  }, [activeTrack]);
 
   const handlePlayPause = (track: MusicTrack) => {
     if (activeTrack?.url === track.url) {
@@ -65,15 +71,9 @@ export function FocusMusic() {
         <CardDescription>Background soundscapes for concentration.</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* The audio element is now always rendered but hidden */}
         <audio 
           ref={audioRef} 
           onEnded={onEnded}
-          onCanPlay={() => {
-            if (isPlaying && audioRef.current) {
-                audioRef.current.play().catch(e => console.error("Error on canplay auto-play:", e));
-            }
-          }}
           className="hidden"
          />
         <ul className="space-y-3">
