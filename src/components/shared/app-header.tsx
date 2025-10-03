@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { BrainCircuit, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useAuth } from '@/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +15,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
-  const { user, signOut } = useAuth();
+  const { user } = useUser();
+  const auth = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
+    if (auth) {
+      await auth.signOut();
+      sessionStorage.removeItem('isGuest');
+      router.push('/login');
+    }
   };
   
   const getInitials = (email?: string | null) => {

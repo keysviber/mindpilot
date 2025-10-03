@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,15 +16,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Chrome } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { setGuestMode } = useAuth();
+  const auth = useAuth();
   const [isGoogleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
+    if (!auth) return;
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
@@ -46,7 +46,7 @@ export default function SignupPage() {
   };
   
   const handleGuestMode = () => {
-    setGuestMode(true);
+    sessionStorage.setItem('isGuest', 'true');
     router.push('/');
   }
 

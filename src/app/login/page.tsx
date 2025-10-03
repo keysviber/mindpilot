@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,16 +16,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { BrainCircuit, Chrome } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { setGuestMode } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
   const [isGoogleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
+    if (!auth) return;
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
@@ -47,7 +46,7 @@ export default function LoginPage() {
   };
 
   const handleGuestMode = () => {
-    setGuestMode(true);
+    sessionStorage.setItem('isGuest', 'true');
     router.push('/');
   }
 
@@ -65,7 +64,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading || isLoading}>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                  {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2"/>}
                 Sign In with Google
             </Button>
@@ -81,7 +80,7 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            <Button variant="secondary" onClick={handleGuestMode} disabled={isGoogleLoading || isLoading}>
+            <Button variant="secondary" onClick={handleGuestMode} disabled={isGoogleLoading}>
                 Continue as Guest
             </Button>
         </CardContent>
