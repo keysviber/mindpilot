@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useUser } from '@/firebase';
+import { Input } from '../ui/input';
 
 type SavedNote = {
   id: number;
@@ -33,6 +34,15 @@ export function NoteGenerator() {
   const { toast } = useToast();
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [areNotesLoading, setAreNotesLoading] = useState(true);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      documents: '',
+      lectureNotes: '',
+      title: '',
+    },
+  });
 
   const getLocalStorageKey = () => {
     return user ? `ai-notes_${user.uid}` : 'ai-notes_guest';
@@ -110,7 +120,7 @@ export function NoteGenerator() {
                   <FormItem>
                     <FormLabel>Note Title</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Summary of Photosynthesis" {...field} rows={1} />
+                      <Input placeholder="e.g., Summary of Photosynthesis" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
