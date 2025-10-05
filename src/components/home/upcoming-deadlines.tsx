@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function UpcomingDeadlines() {
@@ -15,7 +15,10 @@ export function UpcomingDeadlines() {
         <p className="text-sm text-muted-foreground mb-4">
           Connect your calendar to see upcoming exams and assignment deadlines here.
         </p>
-        <Button variant="outline" className="w-full">Connect Calendar</Button>
+        <Button variant="outline" className="w-full">
+          <CalendarPlus className="mr-2 h-4 w-4" />
+          Connect Calendar
+        </Button>
       </CardContent>
     </Card>
   );
