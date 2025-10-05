@@ -13,6 +13,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
+import { Badge } from '../ui/badge';
+
+const notifications = [
+    { title: "New Study Tip!", description: "A new personalized study tip is available for you.", time: "2m ago" },
+    { title: "Challenge Complete!", description: "You've completed the 'Weekend Warrior' challenge.", time: "1h ago" },
+    { title: "Focus Session", description: "You completed a 25-minute focus session.", time: "3h ago" },
+];
 
 export function AppHeader() {
   const { user } = useUser();
@@ -48,10 +55,30 @@ export function AppHeader() {
                   Community
                 </Link>
               </Button>
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                        <Bell className="h-5 w-5" />
+                        <Badge className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs" variant="destructive">
+                            {notifications.length}
+                        </Badge>
+                        <span className="sr-only">Notifications</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-80" align="end">
+                    <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {notifications.map((n, i) => (
+                        <DropdownMenuItem key={i} className="flex flex-col items-start gap-1">
+                           <div className="flex justify-between w-full">
+                             <p className="font-medium">{n.title}</p>
+                             <p className="text-xs text-muted-foreground">{n.time}</p>
+                           </div>
+                           <p className="text-sm text-muted-foreground whitespace-normal">{n.description}</p>
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -71,6 +98,9 @@ export function AppHeader() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                   <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                    Dashboard
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     Sign out
                   </DropdownMenuItem>
