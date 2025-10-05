@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ import { Input } from '../ui/input';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { useProgress } from '@/hooks/use-progress';
 
 type SavedNote = {
   id: string;
@@ -38,6 +39,7 @@ export function NoteGenerator() {
   const [result, setResult] = useState<SummarizeDocumentsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { incrementAiSummaries } = useProgress();
 
   const notesCollectionRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -66,12 +68,14 @@ export function NoteGenerator() {
       });
 
       setResult(summaryResult);
+      incrementAiSummaries();
 
       if (firestore && user) {
         const newNote = {
           title: values.title,
           content: summaryResult.summary,
           userId: user.uid,
+          sourceDocument: values.title, // or some other identifier
           creationDate: new Date().toISOString(),
         };
         await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'ai_notes'), newNote);

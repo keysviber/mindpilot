@@ -10,15 +10,16 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, Loader2 } from 'lucide-react';
-import { achievements } from '@/lib/data';
 import { generatePersonalizedStudyTip } from '@/ai/flows/generate-personalized-study-tip';
 import { useToast } from '@/hooks/use-toast';
+import { useProgress } from '@/hooks/use-progress';
 
 export function StudyTipDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [tip, setTip] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { progress } = useProgress();
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -27,38 +28,43 @@ export function StudyTipDialog() {
     if (lastOpened !== today) {
       setIsOpen(true);
       localStorage.setItem('studyTipDialogLastOpened', today);
-
-      const fetchTip = async () => {
-        setIsLoading(true);
-        try {
-          const performanceData = {
-            streak: achievements.find(a => a.title.includes('Streak'))?.current || 0,
-            pomodoroSessions: achievements.find(a => a.title.includes('Pomodoro'))?.current || 0,
-            aiSummaries: achievements.find(a => a.title.includes('Learner'))?.current || 0,
-          };
-
-          const result = await generatePersonalizedStudyTip(performanceData);
-          if (result.tip) {
-            setTip(result.tip);
-          } else {
-            setTip("Keep up the great work! Consistency is key to success.");
-          }
-        } catch (error) {
-          console.error("Failed to generate personalized tip:", error);
-          setTip("Welcome back! Try to complete one focus session today to build your streak.");
-          toast({
-            title: 'Could not fetch AI tip',
-            description: 'Showing a default tip instead.',
-            variant: 'destructive',
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fetchTip();
     }
-  }, [toast]);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && progress) {
+        const fetchTip = async () => {
+            setIsLoading(true);
+            try {
+            const performanceData = {
+                streak: progress.currentStreak || 0,
+                pomodoroSessions: progress.pomodoroSessions || 0,
+                aiSummaries: progress.aiSummaries || 0,
+            };
+
+            const result = await generatePersonalizedStudyTip(performanceData);
+            if (result.tip) {
+                setTip(result.tip);
+            } else {
+                setTip("Keep up the great work! Consistency is key to success.");
+            }
+            } catch (error) {
+            console.error("Failed to generate personalized tip:", error);
+            setTip("Welcome back! Try to complete one focus session today to build your streak.");
+            toast({
+                title: 'Could not fetch AI tip',
+                description: 'Showing a default tip instead.',
+                variant: 'destructive',
+            });
+            } finally {
+            setIsLoading(false);
+            }
+        };
+
+        fetchTip();
+    }
+  }, [isOpen, progress, toast]);
+
 
   if (!isOpen) {
     return null;

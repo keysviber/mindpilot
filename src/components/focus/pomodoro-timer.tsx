@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Settings, Coffee, Brain } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, Brain } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from '../ui/badge';
+import { useProgress } from '@/hooks/use-progress';
 
 type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 
@@ -23,7 +24,8 @@ export function PomodoroTimer() {
   const [mode, setMode] = useState<TimerMode>('focus');
   const [timeLeft, setTimeLeft] = useState(focusDuration * 60);
   const [isActive, setIsActive] = useState(false);
-  const [cycles, setCycles] = useState(0);
+
+  const { progress, incrementPomodoros, incrementStreak } = useProgress();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,8 +56,10 @@ export function PomodoroTimer() {
   const handleSessionEnd = () => {
     setIsActive(false);
     if (mode === 'focus') {
-      const newCycles = cycles + 1;
-      setCycles(newCycles);
+      const newCycles = (progress?.pomodoroSessions ?? 0) + 1;
+      incrementPomodoros();
+      incrementStreak();
+
       if (newCycles % 4 === 0) {
         setMode('longBreak');
         setTimeLeft(longBreakDuration * 60);
@@ -90,8 +94,8 @@ export function PomodoroTimer() {
 
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
-  const progress = (timeLeft / totalDuration) * 100;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const progressPercentage = (timeLeft / totalDuration) * 100;
+  const strokeDashoffset = circumference - (progressPercentage / 100) * circumference;
 
   return (
     <Card className="text-center">
@@ -136,7 +140,7 @@ export function PomodoroTimer() {
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-4">
-        <p className="text-sm text-muted-foreground">Focus cycles completed: {cycles}</p>
+        <p className="text-sm text-muted-foreground">Focus cycles completed: {progress?.pomodoroSessions ?? 0}</p>
         <div className="flex items-center gap-4 text-sm">
             <label htmlFor="focus-duration">Focus:</label>
             <Select value={String(focusDuration)} onValueChange={(v) => { setFocusDuration(Number(v)); if (mode === 'focus') setTimeLeft(Number(v) * 60)}}>

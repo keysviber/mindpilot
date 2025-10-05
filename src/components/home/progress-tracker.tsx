@@ -1,9 +1,41 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { achievements } from "@/lib/data";
-import { TrendingUp } from "lucide-react";
+import { useProgress } from "@/hooks/use-progress";
+import { TrendingUp, Flame, Trophy, Zap } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 export function ProgressTracker() {
+    const { progress, achievementGoals, isLoading } = useProgress();
+
+    const achievements = [
+        { 
+            icon: Flame, 
+            title: "5-Day Streak", 
+            description: "Studied for 5 days in a row.", 
+            current: progress?.currentStreak ?? 0, 
+            total: achievementGoals.streak,
+            key: 'currentStreak'
+        },
+        { 
+            icon: Trophy, 
+            title: "Pomodoro Master", 
+            description: "Completed 50 focus sessions.", 
+            current: progress?.pomodoroSessions ?? 0, 
+            total: achievementGoals.pomodoros,
+            key: 'pomodoroSessions'
+        },
+        { 
+            icon: Zap, 
+            title: "Quick Learner", 
+            description: "Generated 10 AI summaries.", 
+            current: progress?.aiSummaries ?? 0,
+            total: achievementGoals.aiSummaries,
+            key: 'aiSummaries'
+        },
+    ];
+
   return (
     <Card className="animate-fade-in-up">
       <CardHeader>
@@ -13,7 +45,21 @@ export function ProgressTracker() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {achievements.map((achievement, index) => {
+        {isLoading && (
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                </div>
+                 <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                </div>
+            </div>
+        )}
+        {!isLoading && achievements.map((achievement, index) => {
           const percentage = (achievement.current / achievement.total) * 100;
           return (
             <div 
