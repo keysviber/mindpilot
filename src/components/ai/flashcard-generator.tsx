@@ -12,21 +12,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Layers } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Flashcard } from './flashcard';
+import { Flashcard as FlashcardComponent } from './flashcard';
 import { Skeleton } from '../ui/skeleton';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { Input } from '../ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 type Flashcard = {
-  question: string;
-  answer: string;
+  front: string;
+  back: string;
 };
 
 type SavedFlashcardSet = {
-  id: number;
+  id: string;
   topic: string;
   flashcards: Flashcard[];
+  userId?: string;
+  creationDate: string;
 };
 
 const formSchema = z.object({
@@ -38,27 +43,15 @@ export function FlashcardGenerator() {
   const [result, setResult] = useState<GenerateFlashcardsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user } = useUser();
-  const [savedSets, setSavedSets] = useState<SavedFlashcardSet[]>([]);
-  const [areSetsLoading, setAreSetsLoading] = useState(true);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  const getLocalStorageKey = () => {
-    return user ? `flashcard-sets_${user.uid}` : 'flashcard-sets_guest';
-  };
+  const flashcardSetsCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.uid, 'flashcards');
+  }, [firestore, user]);
 
-  useEffect(() => {
-    setAreSetsLoading(true);
-    try {
-      const key = getLocalStorageKey();
-      const storedSets = localStorage.getItem(key);
-      if (storedSets) {
-        setSavedSets(JSON.parse(storedSets));
-      }
-    } catch (error) {
-      console.error("Failed to load flashcard sets from localStorage", error);
-    }
-    setAreSetsLoading(false);
-  }, [user]);
+  const { data: savedSets, isLoading: areSetsLoading } = useCollection<SavedFlashcardSet>(flashcardSetsCollectionRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,20 +70,20 @@ export function FlashcardGenerator() {
       if (flashcardResult.flashcards && flashcardResult.flashcards.length > 0) {
         setResult(flashcardResult);
         
-        const newSet: SavedFlashcardSet = {
-          id: Date.now(),
-          topic: values.topic,
-          flashcards: flashcardResult.flashcards,
-        };
-
-        const updatedSets = [newSet, ...savedSets];
-        setSavedSets(updatedSets);
-        localStorage.setItem(getLocalStorageKey(), JSON.stringify(updatedSets));
-
-        toast({
-          title: 'Flashcards Saved Locally!',
-          description: `A new set with ${flashcardResult.flashcards.length} flashcards on "${values.topic}" has been saved to this device.`,
-        });
+        if (firestore && user) {
+          const newSet = {
+            topic: values.topic,
+            flashcards: flashcardResult.flashcards.map(fc => ({ front: fc.question, back: fc.answer })),
+            userId: user.uid,
+            creationDate: new Date().toISOString(),
+          };
+          await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'flashcards'), newSet);
+          toast({
+            title: 'Flashcards Saved!',
+            description: `A new set for "${values.topic}" has been saved to your account.`,
+          });
+        }
+        
       } else {
         toast({
           title: 'No Flashcards Generated',
@@ -116,7 +109,7 @@ export function FlashcardGenerator() {
         <CardHeader>
           <CardTitle>AI Flashcard Generator</CardTitle>
           <CardDescription>
-            Paste your study materials, give it a topic, and the AI will create and save flashcards locally.
+            Paste your study materials, give it a topic, and the AI will create flashcards and save them to your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +141,7 @@ export function FlashcardGenerator() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isLoading} className="w-full">
+              <Button type="submit" disabled={isLoading || isUserLoading} className="w-full">
                 {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Layers className="mr-2" />}
                 Generate & Save Flashcards
               </Button>
@@ -162,7 +155,7 @@ export function FlashcardGenerator() {
           <CardHeader>
             <CardTitle>Generated Flashcards</CardTitle>
             <CardDescription>
-              Review your new set of flashcards below. They are automatically saved locally.
+              Review your new set of flashcards below. They are automatically saved.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -179,7 +172,7 @@ export function FlashcardGenerator() {
                 <CarouselContent>
                   {result.flashcards.map((card, index) => (
                     <CarouselItem key={index}>
-                      <Flashcard question={card.question} answer={card.answer} />
+                      <FlashcardComponent question={card.question} answer={card.answer} />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
@@ -199,21 +192,21 @@ export function FlashcardGenerator() {
         <Card>
             <CardHeader>
                 <CardTitle>Saved Flashcard Sets</CardTitle>
-                <CardDescription>Your locally saved flashcard sets.</CardDescription>
+                <CardDescription>Your saved flashcard sets.</CardDescription>
             </CardHeader>
             <CardContent>
                 {areSetsLoading && <p>Loading sets...</p>}
-                {!areSetsLoading && savedSets.length === 0 && <p className="text-sm text-muted-foreground text-center">No flashcard sets saved yet.</p>}
+                {!areSetsLoading && (!savedSets || savedSets.length === 0) && <p className="text-sm text-muted-foreground text-center">No flashcard sets saved yet.</p>}
                 <Accordion type="single" collapsible className="w-full">
-                    {savedSets.map(set => (
+                    {savedSets?.map(set => (
                         <AccordionItem value={`set-${set.id}`} key={set.id}>
                             <AccordionTrigger>{set.topic} ({set.flashcards.length} cards)</AccordionTrigger>
                             <AccordionContent>
                                 <div className="space-y-2">
                                     {set.flashcards.map((card, index) => (
                                         <div key={index} className="p-2 bg-muted/50 rounded-md text-sm">
-                                            <p><strong>Q:</strong> {card.question}</p>
-                                            <p><strong>A:</strong> {card.answer}</p>
+                                            <p><strong>Q:</strong> {card.front}</p>
+                                            <p><strong>A:</strong> {card.back}</p>
                                         </div>
                                     ))}
                                 </div>

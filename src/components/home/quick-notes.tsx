@@ -4,69 +4,53 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FilePenLine, Save, Loader2 } from "lucide-react";
-import { useUser } from "@/firebase";
+import { FilePenLine, Save, Loader2, Trash2 } from "lucide-react";
+import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection } from "@/firebase/firestore/use-collection";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, doc } from "firebase/firestore";
 
-// Define a type for our note for better type-safety
 type Note = {
-  id: number;
+  id: string;
   content: string;
   createdAt: string;
+  userId?: string;
 };
 
 export function QuickNotes() {
-  const { user } = useUser(); // We still use this to associate notes with a user locally
-  const [notes, setNotes] = useState<Note[]>([]);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [newNote, setNewNote] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const getLocalStorageKey = () => {
-    // Create a unique key for each user, or a generic one for guests
-    return user ? `quick-notes_${user.uid}` : 'quick-notes_guest';
-  };
+  const notesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.uid, 'notes');
+  }, [firestore, user]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    try {
-      const key = getLocalStorageKey();
-      const savedNotes = localStorage.getItem(key);
-      if (savedNotes) {
-        setNotes(JSON.parse(savedNotes));
-      } else {
-        setNotes([]);
-      }
-    } catch (error) {
-      console.error("Failed to load notes from localStorage", error);
-      setNotes([]);
-    }
-    setIsLoading(false);
-  }, [user]); // Rerun when the user logs in or out
+  const { data: notes, isLoading: areNotesLoading } = useCollection<Note>(notesCollectionRef);
 
   const handleSaveNote = () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !firestore || !user) return;
 
     setIsSaving(true);
-    const noteToSave: Note = {
-      id: Date.now(),
+    const noteToSave = {
       content: newNote,
       createdAt: new Date().toISOString(),
+      userId: user.uid,
     };
-
-    const updatedNotes = [noteToSave, ...notes];
-    setNotes(updatedNotes);
-
-    try {
-      const key = getLocalStorageKey();
-      localStorage.setItem(key, JSON.stringify(updatedNotes));
-    } catch (error) {
-      console.error("Failed to save note to localStorage", error);
-      // Optionally, show a toast to the user
-    }
+    
+    addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'notes'), noteToSave);
     
     setNewNote("");
     setIsSaving(false);
   };
+  
+  const handleDeleteNote = (noteId: string) => {
+    if (!firestore || !user) return;
+    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'notes', noteId));
+  };
+
 
   return (
     <Card className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
@@ -75,7 +59,7 @@ export function QuickNotes() {
           <FilePenLine className="h-5 w-5 text-primary" />
           <span>Quick Notes</span>
         </CardTitle>
-        <CardDescription>Jot down your thoughts. They are saved locally to your device.</CardDescription>
+        <CardDescription>Jot down your thoughts. They're saved to your account.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -84,27 +68,35 @@ export function QuickNotes() {
             rows={4}
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            disabled={isSaving}
+            disabled={isSaving || isUserLoading || !user}
           />
-          <Button onClick={handleSaveNote} disabled={!newNote.trim() || isSaving} className="w-full sm:w-auto">
+          <Button onClick={handleSaveNote} disabled={!newNote.trim() || isSaving || isUserLoading || !user} className="w-full sm:w-auto">
             {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />}
             Save Note
           </Button>
 
           <div className="space-y-3 pt-4">
             <h3 className="text-sm font-medium text-muted-foreground">My Notes</h3>
-            {isLoading && <p>Loading notes...</p>}
-            {!isLoading && notes.length === 0 && (
+            {areNotesLoading && <p>Loading notes...</p>}
+            {!areNotesLoading && (!notes || notes.length === 0) && (
               <p className="text-sm text-muted-foreground">You haven't saved any notes yet.</p>
             )}
+             {!user && !isUserLoading && (
+                <p className="text-sm text-center text-muted-foreground bg-muted p-4 rounded-md">
+                    Sign in to save notes to your account and access them from any device.
+                </p>
+            )}
             <div className="space-y-2">
-              {notes.map((note, index) => (
+              {notes?.map((note, index) => (
                 <div 
                   key={note.id} 
-                  className="p-3 bg-secondary rounded-md text-sm animate-fade-in-up"
+                  className="flex justify-between items-start p-3 bg-secondary rounded-md text-sm animate-fade-in-up"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {note.content}
+                  <p className="break-all">{note.content}</p>
+                   <Button variant="ghost" size="icon" className="shrink-0" onClick={() => handleDeleteNote(note.id)}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                   </Button>
                 </div>
               ))}
             </div>

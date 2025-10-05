@@ -33,6 +33,7 @@ export function AudioGenerator() {
   const [areAudiosLoading, setAreAudiosLoading] = useState(true);
 
   const getLocalStorageKey = () => {
+    // For audio, we will keep it local as storing large base64 strings in Firestore is not ideal.
     return user ? `audio-notes_${user.uid}` : 'audio-notes_guest';
   };
 

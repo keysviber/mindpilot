@@ -38,6 +38,7 @@ export function StudyPlanGenerator() {
   const [arePlansLoading, setArePlansLoading] = useState(true);
 
   const getLocalStorageKey = () => {
+    // We can keep study plans local as they are less likely to be needed across devices.
     return user ? `study-plans_${user.uid}` : 'study-plans_guest';
   };
 
