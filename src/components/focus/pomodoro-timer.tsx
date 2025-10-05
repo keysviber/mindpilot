@@ -25,7 +25,7 @@ export function PomodoroTimer() {
   const [timeLeft, setTimeLeft] = useState(focusDuration * 60);
   const [isActive, setIsActive] = useState(false);
 
-  const { progress, incrementPomodoros, incrementStreak } = useProgress();
+  const { progress, incrementPomodoros } = useProgress();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -36,7 +36,10 @@ export function PomodoroTimer() {
   }, [mode, focusDuration, shortBreakDuration, longBreakDuration]);
 
   useEffect(() => {
-    setTimeLeft(totalDuration);
+    // Make sure time left is reset when the total duration changes, but only if the timer isn't active
+    if (!isActive) {
+        setTimeLeft(totalDuration);
+    }
   }, [totalDuration]);
 
   useEffect(() => {
@@ -58,18 +61,14 @@ export function PomodoroTimer() {
     if (mode === 'focus') {
       const newCycles = (progress?.pomodoroSessions ?? 0) + 1;
       incrementPomodoros();
-      incrementStreak();
 
       if (newCycles % 4 === 0) {
-        setMode('longBreak');
-        setTimeLeft(longBreakDuration * 60);
+        switchMode('longBreak', false);
       } else {
-        setMode('shortBreak');
-        setTimeLeft(shortBreakDuration * 60);
+        switchMode('shortBreak', false);
       }
     } else {
-      setMode('focus');
-      setTimeLeft(focusDuration * 60);
+      switchMode('focus', false);
     }
   };
 
@@ -81,9 +80,11 @@ export function PomodoroTimer() {
     setTimeLeft(totalDuration);
   };
   
-  const switchMode = (newMode: TimerMode) => {
+  const switchMode = (newMode: TimerMode, userInitiated = true) => {
     setMode(newMode);
-    setIsActive(false);
+    if (userInitiated) {
+        setIsActive(false);
+    }
     if (newMode === 'focus') setTimeLeft(focusDuration * 60);
     if (newMode === 'shortBreak') setTimeLeft(shortBreakDuration * 60);
     if (newMode === 'longBreak') setTimeLeft(longBreakDuration * 60);
@@ -143,7 +144,7 @@ export function PomodoroTimer() {
         <p className="text-sm text-muted-foreground">Focus cycles completed: {progress?.pomodoroSessions ?? 0}</p>
         <div className="flex items-center gap-4 text-sm">
             <label htmlFor="focus-duration">Focus:</label>
-            <Select value={String(focusDuration)} onValueChange={(v) => { setFocusDuration(Number(v)); if (mode === 'focus') setTimeLeft(Number(v) * 60)}}>
+            <Select value={String(focusDuration)} onValueChange={(v) => { setFocusDuration(Number(v)); if (mode === 'focus' && !isActive) setTimeLeft(Number(v) * 60)}}>
                 <SelectTrigger id="focus-duration" className="w-24"><SelectValue/></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="15">15 min</SelectItem>
@@ -153,7 +154,7 @@ export function PomodoroTimer() {
                 </SelectContent>
             </Select>
              <label htmlFor="break-duration">Break:</label>
-             <Select value={String(shortBreakDuration)} onValueChange={(v) => { setShortBreakDuration(Number(v)); if (mode === 'shortBreak') setTimeLeft(Number(v) * 60)}}>
+             <Select value={String(shortBreakDuration)} onValueChange={(v) => { setShortBreakDuration(Number(v)); if (mode === 'shortBreak' && !isActive) setTimeLeft(Number(v) * 60)}}>
                 <SelectTrigger id="break-duration" className="w-24"><SelectValue/></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="5">5 min</SelectItem>

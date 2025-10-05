@@ -68,7 +68,10 @@ export function NoteGenerator() {
       });
 
       setResult(summaryResult);
-      incrementAiSummaries();
+      
+      if (user) {
+        incrementAiSummaries();
+      }
 
       if (firestore && user) {
         const newNote = {
