@@ -11,9 +11,9 @@ export const studyTips = [
 ];
 
 export const achievements = [
-  { icon: Flame, title: "5-Day Streak", description: "Studied for 5 days in a row.", current: 5, total: 5 },
-  { icon: Trophy, title: "Pomodoro Master", description: "Completed 50 focus sessions.", current: 27, total: 50 },
-  { icon: Zap, title: "Quick Learner", description: "Generated 10 AI summaries.", current: 4, total: 10 },
+  { icon: Flame, title: "5-Day Streak", description: "Studied for 5 days in a row.", current: 0, total: 5 },
+  { icon: Trophy, title: "Pomodoro Master", description: "Completed 50 focus sessions.", current: 0, total: 50 },
+  { icon: Zap, title: "Quick Learner", description: "Generated 10 AI summaries.", current: 0, total: 10 },
 ];
 
 export type MusicTrack = {
