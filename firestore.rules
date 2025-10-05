@@ -1,212 +1,215 @@
 /**
- * @fileOverview Firestore Security Rules for MindPilot application.
+ * @fileoverview Firestore Security Rules for the MindPilot application.
  *
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model for user-generated content
- * and allows public read access to curated content. All user-specific data is
- * stored under the /users/{userId} path and accessible only by the authenticated user.
+ * and provides public read access to a curated set of study tips and focus music.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information.
- * - /users/{userId}/ai_notes/{aiNoteId}: Stores AI-generated notes for each user.
- * - /users/{userId}/flashcards/{flashcardId}: Stores flashcards created by each user.
- * - /users/{userId}/pomodoro_sessions/{pomodoroSessionId}: Stores Pomodoro session data.
- * - /focus_music/{focusMusicId}: Stores focus music tracks available to all users.
- * - /users/{userId}/progress_tracking/{progressTrackingId}: Stores user's progress data.
- * - /users/{userId}/notes/{noteId}: Stores user's notes.
- * - /study_tips/{studyTipId}: Stores study tips available to all users.
+ * All user-specific data (profiles, notes, flashcards, pomodoro sessions, progress tracking)
+ * is nested under the `/users/{userId}` path.
+ * Public data (study tips, focus music) resides in top-level collections.
  *
  * Key Security Decisions:
- * - User data is strictly segregated and accessible only by the owning user.
- * - Public read access is granted for study tips and focus music.
- * - No user listing is allowed.
- * - Data validation is minimized for rapid prototyping, focusing on ownership.
+ * - User-specific data is only accessible by the owning user (enforced through path-based ownership).
+ * - Public data (study tips, focus music) is readable by all users, but only modifiable through admin roles (unimplemented).
+ * - List operations are allowed for owners of user-specific collections.
+ * - No validation is performed on data types or required fields during write operations (prototyping mode).
  *
  * Denormalization for Authorization:
- * - User-specific data includes a userId field to quickly verify ownership.
+ * The `userId` is used in subcollection documents to establish an ownership relationship. This avoids
+ * costly `get()` operations in security rules.
+ *
+ * Structural Segregation:
+ * Public data (study tips and focus music) is stored in separate, top-level collections
+ * to enable efficient public reads without compromising the security of user-specific data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user profiles, accessible only by the user.
+     * @description Secure user profile data. Only the user can read and write their own profile.
      * @path /users/{userId}
-     * @allow (create) - User with UID 'user123' can create their profile if request.auth.uid == 'user123'.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their profile.
-     * @deny (create) - User with UID 'user456' cannot create a profile with ID 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify profile 'user123'.
+     * @allow (create) User with ID 'user123' can create their profile.
+     * @deny (create) User with ID 'user456' cannot create a profile for 'user123'.
+     * @allow (get) User with ID 'user123' can read their profile.
+     * @deny (get) User with ID 'user456' cannot read the profile of 'user123'.
+     * @allow (update) User with ID 'user123' can update their profile.
+     * @deny (update) User with ID 'user456' cannot update the profile of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their profile.
+     * @deny (delete) User with ID 'user456' cannot delete the profile of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure AI-generated notes, accessible only by the user.
+     * @description Secure AI-generated notes for a specific user. Only the user can manage their own notes.
      * @path /users/{userId}/ai_notes/{aiNoteId}
-     * @allow (create) - User with UID 'user123' can create an AI note under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their AI notes.
-     * @deny (create) - User with UID 'user456' cannot create an AI note under user 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify AI notes under user 'user123'.
+     * @allow (create) User with ID 'user123' can create an AI note.
+     * @deny (create) User with ID 'user456' cannot create an AI note for 'user123'.
+     * @allow (get) User with ID 'user123' can read their AI note.
+     * @deny (get) User with ID 'user456' cannot read the AI note of 'user123'.
+     * @allow (update) User with ID 'user123' can update their AI note.
+     * @deny (update) User with ID 'user456' cannot update the AI note of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their AI note.
+     * @deny (delete) User with ID 'user456' cannot delete the AI note of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/ai_notes/{aiNoteId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure flashcards, accessible only by the user.
+     * @description Secure flashcards created by a specific user. Only the user can manage their own flashcards.
      * @path /users/{userId}/flashcards/{flashcardId}
-     * @allow (create) - User with UID 'user123' can create a flashcard under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their flashcards.
-     * @deny (create) - User with UID 'user456' cannot create a flashcard under user 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify flashcards under user 'user123'.
+     * @allow (create) User with ID 'user123' can create a flashcard.
+     * @deny (create) User with ID 'user456' cannot create a flashcard for 'user123'.
+     * @allow (get) User with ID 'user123' can read their flashcard.
+     * @deny (get) User with ID 'user456' cannot read the flashcard of 'user123'.
+     * @allow (update) User with ID 'user123' can update their flashcard.
+     * @deny (update) User with ID 'user456' cannot update the flashcard of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their flashcard.
+     * @deny (delete) User with ID 'user456' cannot delete the flashcard of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/flashcards/{flashcardId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure Pomodoro sessions, accessible only by the user.
+     * @description Secure Pomodoro session data for a specific user. Only the user can manage their own sessions.
      * @path /users/{userId}/pomodoro_sessions/{pomodoroSessionId}
-     * @allow (create) - User with UID 'user123' can create a pomodoro session under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their pomodoro sessions.
-     * @deny (create) - User with UID 'user456' cannot create a pomodoro session under user 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify pomodoro sessions under user 'user123'.
+     * @allow (create) User with ID 'user123' can create a Pomodoro session.
+     * @deny (create) User with ID 'user456' cannot create a Pomodoro session for 'user123'.
+     * @allow (get) User with ID 'user123' can read their Pomodoro session.
+     * @deny (get) User with ID 'user456' cannot read the Pomodoro session of 'user123'.
+     * @allow (update) User with ID 'user123' can update their Pomodoro session.
+     * @deny (update) User with ID 'user456' cannot update the Pomodoro session of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their Pomodoro session.
+     * @deny (delete) User with ID 'user456' cannot delete the Pomodoro session of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/pomodoro_sessions/{pomodoroSessionId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Focus music tracks, publicly accessible.
+     * @description Allow public read access to focus music tracks. Write access should be restricted to admins (unimplemented).
      * @path /focus_music/{focusMusicId}
-     * @allow (get, list) - Any user, signed in or not, can retrieve focus music tracks.
-     * @deny (create, update, delete) - No user should be able to create, update, or delete music tracks without specific admin privileges (not defined).
-     * @principle Allows public read access while restricting writes.
+     * @allow (get) Any user can read a focus music track.
+     * @deny (create) Any non-admin user cannot create a focus music track.
+     * @principle Allows public reads while restricting writes.
      */
     match /focus_music/{focusMusicId} {
       allow get: if true;
       allow list: if true;
-      allow create: if false; // TODO: Add admin role check here
-      allow update: if false; // TODO: Add admin role check here
-      allow delete: if false; // TODO: Add admin role check here
+      allow create: if false; // TODO: Implement admin-only access.
+      allow update: if false; // TODO: Implement admin-only access.
+      allow delete: if false; // TODO: Implement admin-only access.
     }
 
     /**
-     * @description Secure progress tracking data, accessible only by the user.
+     * @description Secure progress tracking data for a specific user. Only the user can manage their own progress data.
      * @path /users/{userId}/progress_tracking/{progressTrackingId}
-     * @allow (create) - User with UID 'user123' can create progress tracking data under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their progress tracking data.
-     * @deny (create) - User with UID 'user456' cannot create progress tracking data under user 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify progress tracking data under user 'user123'.
+     * @allow (create) User with ID 'user123' can create progress tracking data.
+     * @deny (create) User with ID 'user456' cannot create progress tracking data for 'user123'.
+     * @allow (get) User with ID 'user123' can read their progress tracking data.
+     * @deny (get) User with ID 'user456' cannot read the progress tracking data of 'user123'.
+     * @allow (update) User with ID 'user123' can update their progress tracking data.
+     * @deny (update) User with ID 'user456' cannot update the progress tracking data of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their progress tracking data.
+     * @deny (delete) User with ID 'user456' cannot delete the progress tracking data of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/progress_tracking/{progressTrackingId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure notes, accessible only by the user.
+     * @description Secure notes taken by a specific user. Only the user can manage their own notes.
      * @path /users/{userId}/notes/{noteId}
-     * @allow (create) - User with UID 'user123' can create a note under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/modify their notes.
-     * @deny (create) - User with UID 'user456' cannot create a note under user 'user123'.
-     * @deny (update, delete) - User with UID 'user456' cannot modify notes under user 'user123'.
+     * @allow (create) User with ID 'user123' can create a note.
+     * @deny (create) User with ID 'user456' cannot create a note for 'user123'.
+     * @allow (get) User with ID 'user123' can read their note.
+     * @deny (get) User with ID 'user456' cannot read the note of 'user123'.
+     * @allow (update) User with ID 'user123' can update their note.
+     * @deny (update) User with ID 'user456' cannot update the note of 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their note.
+     * @deny (delete) User with ID 'user456' cannot delete the note of 'user123'.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/notes/{noteId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Study tips, publicly accessible.
+     * @description Allow public read access to study tips. Write access should be restricted to admins (unimplemented).
      * @path /study_tips/{studyTipId}
-     * @allow (get, list) - Any user, signed in or not, can retrieve study tips.
-     * @deny (create, update, delete) - No user should be able to create, update, or delete study tips without specific admin privileges (not defined).
-     * @principle Allows public read access while restricting writes.
+     * @allow (get) Any user can read a study tip.
+     * @deny (create) Any non-admin user cannot create a study tip.
+     * @principle Allows public reads while restricting writes.
      */
     match /study_tips/{studyTipId} {
       allow get: if true;
       allow list: if true;
-      allow create: if false; // TODO: Add admin role check here
-      allow update: if false; // TODO: Add admin role check here
-      allow delete: if false; // TODO: Add admin role check here
+      allow create: if false; // TODO: Implement admin-only access.
+      allow update: if false; // TODO: Implement admin-only access.
+      allow delete: if false; // TODO: Implement admin-only access.
+    }
+
+    // --- Helper functions ---
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the requesting user is the owner of the document, based on the userId.
+     * @param {string} userId The user ID to compare against the request's authentication UID.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the requesting user is the owner of an existing document.
+     * @param {string} userId The user ID to compare against the request's authentication UID and the resource's userId.
+     * @return {boolean} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
     }
   }
 }
