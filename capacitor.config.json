@@ -1,0 +1,9 @@
+{
+  "appId": "com.yourcompany.mindpilot",
+  "appName": "MindPilot",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

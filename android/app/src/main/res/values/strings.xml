@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MindPilot</string>
+    <string name="title_activity_main">MindPilot</string>
+    <string name="package_name">com.yourcompany.mindpilot</string>
+    <string name="custom_url_scheme">com.yourcompany.mindpilot</string>
+</resources>
